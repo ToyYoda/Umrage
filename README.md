@@ -1,74 +1,59 @@
-# Umfrage (Salsa vs Bachata)
+# Garage 61 – Schnellste Runde Spa-Francorchamps
 
-Einfache Next.js-App (App Router). Auf der Startseite gibt es eine Umfrage mit:
-- Slider: Verteilung zwischen 100% Salsa (links) und 100% Bachata (rechts)
-- Dropdown: Ankunftszeit in 15-Minuten-Schritten von 21:00 bis 02:00
+Kleine Next.js-Anwendung, die deine persönliche Bestzeit auf **Spa-Francorchamps**
+direkt aus der [Garage 61](https://garage61.net/) API anzeigt.
 
-Die Antworten werden in `data/responses.json` gespeichert. Eine API `/api/results` liefert die aggregierten, gewichteten Ergebnisse pro 15-Minuten-Bucket.
+## Funktionsweise
 
-Starten:
+- Server-Route `GET /api/fastest-lap` liest deinen Garage 61 Personal Access Token
+  aus der Umgebung und ruft `GET https://garage61.net/api/v1/laps?track=<spa-id>` auf.
+- Die Track-ID für Spa wird, sofern nicht manuell gesetzt, über die Garage 61
+  Track-Liste anhand von „Spa“ / „Francorchamps“ ermittelt (bevorzugt die
+  Grand-Prix-Konfiguration).
+- Aus den zurückgelieferten Runden wird die schnellste (kleinste `lapTime`)
+  ausgewählt und im Frontend hübsch dargestellt.
 
-```powershell
-npm install
-npm run dev
-```
+## Voraussetzungen
 
-Die Seite ist verfügbar unter http://localhost:3000
+- Node.js 20+
+- Einen **Garage 61 Personal Access Token** (in deinem Garage 61 Account unter
+  „My applications“ erstellen).
 
-Deployment auf Render (mit beibehaltener dateibasierter Speicherung)
-1. Erstelle ein Git-Repository lokal und pushe den Code zu GitHub:
-
-```powershell
-git init
-git add .
-git commit -m "Initial commit"
-# Erstelle ein GitHub-Repo und füge es als remote hinzu, z.B.:
-git remote add origin https://github.com/<your-username>/<repo>.git
-git push -u origin main
-```
-
-2. Erstelle auf Render ein neues "Web Service"-Projekt und verbinde es mit deinem GitHub-Repo.
-	- Build Command: `npm install && npm run build`
-	- Start Command: `npm start` (Render setzt die Umgebungsvariable `PORT`; die App nutzt `next start -p $PORT`).
-
-3. Wähle die Branch zum Deployen und starte das Deployment. Render wird die App bauen und starten.
-
-Hinweis zur dateibasierten Speicherung:
-- `data/responses.json` wird auf dem Render-Service geschrieben und bleibt solange erhalten, wie die Instanz läuft. Bei einem neuen Deploy oder wenn die Instanz ersetzt wird, können die Daten überschrieben werden.
-- Für Produktionsdaten oder wenn Sie Persistenz über Deploys hinweg benötigen, empfehlen wir die Migration zu einer Datenbank (z. B. Supabase/Postgres).
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
-## Getting Started
-
-First, run the development server:
+## Einrichtung
 
 ```bash
+npm install
+cp .env.example .env.local
+# anschließend GARAGE61_TOKEN in .env.local eintragen
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Aufruf im Browser: <http://localhost:3000>
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Umgebungsvariablen
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable                  | Pflicht | Beschreibung                                                                                  |
+| ------------------------- | ------- | --------------------------------------------------------------------------------------------- |
+| `GARAGE61_TOKEN`          | ja      | Persönlicher Zugriffstoken (Bearer) für die Garage 61 API.                                    |
+| `GARAGE61_SPA_TRACK_ID`   | nein    | Track-ID für Spa-Francorchamps. Wird sie nicht gesetzt, ermittelt die App sie automatisch.    |
+| `GARAGE61_API_BASE`       | nein    | API-Basis-URL (Default: `https://garage61.net/api/v1`).                                       |
 
-## Learn More
+## Hinweise
 
-To learn more about Next.js, take a look at the following resources:
+- Die `findLaps`-API liefert nur Runden, die du selbst (oder Teamkollegen) gefahren
+  hast – globale Bestzeiten werden vom Anbieter aus Datenschutzgründen nicht
+  bereitgestellt.
+- Wenn dein Account noch keine Runde in Spa enthält, zeigt die App eine
+  entsprechende Meldung an.
+- Token bitte **nicht** ins Repository einchecken; `.env*` ist via `.gitignore`
+  bereits ausgeschlossen.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Build / Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run build
+npm start
+```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Für Render/Vercel reicht es, `GARAGE61_TOKEN` als Environment-Variable im Service
+zu hinterlegen.
