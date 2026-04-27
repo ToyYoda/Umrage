@@ -1,27 +1,18 @@
-"use client";
+import FastestLapCard from "./components/FastestLapCard";
 
-import dynamic from "next/dynamic";
-import SurveyForm from "./components/SurveyForm";
-import ResultsChart from "./components/ResultsChart";
-
-export default function Home() {
+export default function Page() {
   return (
-    <div className="flex min-h-screen items-start justify-center bg-zinc-50 font-sans dark:bg-black py-12">
-      <main className="w-full max-w-4xl space-y-8 px-6">
-        <header className="space-y-2">
-          <h1 className="text-3xl font-semibold">Party-Umfrage: Salsa vs Bachata</h1>
-          <p className="text-zinc-600">Gib deine Präferenz und Ankunftszeit an. Die Ergebnisse werden pro 15 Minuten dargestellt.</p>
+    <main className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-b from-neutral-950 to-neutral-900 text-neutral-100">
+      <div className="w-full max-w-2xl">
+        <header className="mb-8">
+          <p className="uppercase tracking-widest text-xs text-emerald-400 mb-2">Garage 61</p>
+          <h1 className="text-3xl sm:text-4xl font-bold">Schnellste Runde · Spa-Francorchamps</h1>
+          <p className="text-neutral-400 mt-2 text-sm">
+            Liest deine persönliche Bestzeit in Spa direkt aus der Garage 61 API.
+          </p>
         </header>
-
-        <section className="grid gap-8 md:grid-cols-2">
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
-            <SurveyForm />
-          </div>
-          <div className="rounded-lg border bg-white p-6 shadow-sm">
-            <ResultsChart />
-          </div>
-        </section>
-      </main>
-    </div>
+        <FastestLapCard />
+      </div>
+    </main>
   );
 }
