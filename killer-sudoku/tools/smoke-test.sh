@@ -46,7 +46,7 @@ width=$(adb shell wm size | grep -o '[0-9]*x' | tail -1 | tr -d x)
 dp() { echo $(($1 * density / 160)); }
 read -r _ _ _ back_bottom <<< "$(bounds_of content-desc "Zurück zum Menü")"
 board_left=$(dp 8)
-board_top=$((back_bottom + $(dp 8)))
+board_top=$((back_bottom + $(dp 4)))
 cell=$(((width - 2 * $(dp 8)) / 9))
 tap_cell() { adb shell input tap $((board_left + $2 * cell + cell / 2)) $((board_top + $1 * cell + cell / 2)); sleep 0.5; }
 
@@ -74,11 +74,14 @@ tap_digit 2
 shot 5-notiz-entfernt
 check_crash
 
-# Tipp und Rückgängig.
+# Erklärender Tipp, danach schließen; Rückgängig.
 tap_text "Notizen: an"
 tap_cell 2 6
+shot 6-kombinationen
 tap_text "Tipp"
-shot 6-tipp
+sleep 3
+shot 7-tipp
+tap_text "Schließen"
 tap_text "Rückgängig"
 check_crash
 
@@ -86,7 +89,7 @@ check_crash
 adb shell settings put system accelerometer_rotation 0
 adb shell settings put system user_rotation 1
 sleep 3
-shot 7-querformat
+shot 8-querformat
 adb shell settings put system user_rotation 0
 sleep 2
 check_crash
@@ -95,6 +98,29 @@ check_crash
 adb shell am force-stop app.killersudoku
 adb shell am start -W -n app.killersudoku/.MainActivity
 sleep 3
-shot 8-neustart
+shot 9-neustart
+check_crash
+
+# Statistik und Einstellungen; farbige Käfige einschalten und weiterspielen.
+tap_content() {
+  read -r x0 y0 x1 y1 <<< "$(bounds_of content-desc "$1")"
+  adb shell input tap $(((x0 + x1) / 2)) $(((y0 + y1) / 2))
+  sleep 1
+}
+tap_content "Statistik"
+shot 10-statistik
+adb shell input keyevent 4
+sleep 1
+tap_content "Einstellungen"
+tap_text "Farbige Käfige"
+shot 11-einstellungen
+adb shell input keyevent 4
+sleep 1
+read -r x0 y0 x1 y1 <<< "$(adb shell uiautomator dump /sdcard/ui.xml > /dev/null; adb shell cat /sdcard/ui.xml |
+  grep -o 'text="Fortsetzen ·[^"]*"[^>]*bounds="[^"]*"' | head -1 |
+  sed -E 's/.*bounds="\[([0-9]+),([0-9]+)\]\[([0-9]+),([0-9]+)\]".*/\1 \2 \3 \4/')"
+adb shell input tap $(((x0 + x1) / 2)) $(((y0 + y1) / 2))
+sleep 2
+shot 12-farbige-kaefige
 check_crash
 echo "Rauchtest erfolgreich."

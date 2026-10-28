@@ -1,5 +1,6 @@
 package app.killersudoku
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -25,10 +26,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import app.killersudoku.ui.ConfirmDiscardDialog
 import app.killersudoku.ui.GameScreen
 import app.killersudoku.ui.GameViewModel
 import app.killersudoku.ui.HomeScreen
 import app.killersudoku.ui.Screen
+import app.killersudoku.ui.SettingsScreen
+import app.killersudoku.ui.StatsScreen
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -52,6 +56,14 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun App(vm: GameViewModel) {
+    val context = LocalContext.current
+    val share: (String) -> Unit = { text ->
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        context.startActivity(Intent.createChooser(intent, "Rätsel teilen"))
+    }
     Scaffold { padding ->
         Box(
             Modifier
@@ -59,13 +71,17 @@ private fun App(vm: GameViewModel) {
                 .padding(padding),
         ) {
             val game = vm.game
-            if (vm.screen == Screen.GAME && game != null) {
-                BackHandler(onBack = vm::showHome)
-                GameTimer(vm)
-                GameScreen(vm, game)
-            } else {
-                HomeScreen(vm)
+            if (vm.screen != Screen.HOME) BackHandler(onBack = vm::showHome)
+            when {
+                vm.screen == Screen.GAME && game != null -> {
+                    GameTimer(vm)
+                    GameScreen(vm, game, share)
+                }
+                vm.screen == Screen.STATS -> StatsScreen(vm)
+                vm.screen == Screen.SETTINGS -> SettingsScreen(vm)
+                else -> HomeScreen(vm)
             }
+            ConfirmDiscardDialog(vm)
         }
     }
 }

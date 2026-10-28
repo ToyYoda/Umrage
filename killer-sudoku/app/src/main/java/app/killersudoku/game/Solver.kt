@@ -47,7 +47,7 @@ class Solver(
         val groups = cages.map { it.sum to it.cells }.toMutableList()
         val cageOf = IntArray(81)
         cages.forEachIndexed { index, cage -> cage.cells.forEach { cageOf[it] = index } }
-        for (unit in UNITS) {
+        for (unit in Grid.units) {
             val unitSet = unit.toSet()
             val inside = unit.map { cageOf[it] }.distinct().filter { c -> cages[c].cells.all { it in unitSet } }
             val rest = unit.filter { cageOf[it] !in inside }
@@ -173,7 +173,7 @@ class Solver(
             }
             if (progress) continue
 
-            for (unit in UNITS) {
+            for (unit in Grid.units) {
                 var placed = 0
                 var once = 0
                 var twice = 0
@@ -273,14 +273,6 @@ class Solver(
 
     private companion object {
         const val ALL = 0x1FF
-
-        val UNITS: List<IntArray> = buildList {
-            for (i in 0 until 9) {
-                add(IntArray(9) { i * 9 + it })
-                add(IntArray(9) { it * 9 + i })
-                add(IntArray(9) { (i / 3) * 27 + (i % 3) * 3 + (it / 3) * 9 + it % 3 })
-            }
-        }
     }
 }
 
@@ -303,7 +295,7 @@ internal object CageSums {
     fun isPossible(digits: Int, count: Int, sum: Int): Boolean =
         sum in 0..45 && (table[digits * 10 + count] ushr sum) and 1L == 1L
 
-    /** Alle Ziffernmengen (als Bitmaske) mit [count] Ziffern und der Summe [sum]. */
+    /** Alle Ziffernmengen (als Bitmaske) mit [count] Ziffern und der Summe [sum], aufsteigend sortiert (1+9 vor 2+8). */
     fun combinations(count: Int, sum: Int): IntArray = if (sum in 0..45) combos[count * 46 + sum] else EMPTY
 
     private val EMPTY = IntArray(0)
@@ -313,6 +305,6 @@ internal object CageSums {
         val sum = index % 46
         (0 until 512).filter { mask ->
             Integer.bitCount(mask) == count && (1..9).sumOf { if (mask and (1 shl (it - 1)) != 0) it else 0 } == sum
-        }.toIntArray()
+        }.sortedBy { mask -> (1..9).filter { mask and (1 shl (it - 1)) != 0 }.joinToString("") }.toIntArray()
     }
 }
