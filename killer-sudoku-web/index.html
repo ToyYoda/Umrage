@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Werbefreies Killer-Sudoku mit erklärenden Tipps, täglichem Rätsel und Rätsel-Codes.">
+  <meta name="theme-color" content="#1f5fa8">
+  <title>Killer Sudoku</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <style>:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }</style>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <main id="app">
+    <!-- Startbildschirm -->
+    <section id="home" class="screen" hidden>
+      <div class="topbar end">
+        <button class="icon-button" data-action="show-stats" aria-label="Statistik" title="Statistik">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg>
+        </button>
+        <button class="icon-button" data-action="show-settings" aria-label="Einstellungen" title="Einstellungen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L14.9 3h-4l-.4 2.9a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.4 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.9h4l.4-2.9a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM12.9 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
+        </button>
+      </div>
+      <h1>Killer Sudoku</h1>
+      <div id="home-content"></div>
+      <p class="help">Feld antippen oder mit den Pfeiltasten wählen, dann Ziffer wählen. Im Notizmodus – oder per
+        langem Druck bzw. mit gedrückter Umschalttaste – werden Notizen eingetragen. Nochmals tippen entfernt sie wieder.</p>
+    </section>
+
+    <!-- Spiel -->
+    <section id="game" class="screen" hidden>
+      <div class="game-layout">
+        <div class="statusbar">
+          <button class="icon-button" data-action="show-home" aria-label="Zurück zum Menü" title="Menü">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/></svg>
+          </button>
+          <div class="status-title">
+            <div id="game-title"></div>
+            <div id="game-code" class="muted small"></div>
+          </div>
+          <button class="icon-button" data-action="share" id="share-button" aria-label="Rätsel teilen" title="Teilen">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 16a3 3 0 0 0-2.4 1.2l-6.7-3.9a3 3 0 0 0 0-2.6l6.7-3.9A3 3 0 1 0 15 5l-6.7 3.9a3 3 0 1 0 0 6.2L15 19a3 3 0 1 0 3-3z"/></svg>
+          </button>
+          <span id="mistakes"></span>
+          <span id="timer" class="timer"></span>
+        </div>
+        <div class="board-wrap">
+          <canvas id="board" aria-label="Spielfeld" role="img"></canvas>
+        </div>
+        <div class="side">
+          <div id="info" class="info" aria-live="polite"></div>
+          <div id="controls">
+            <div class="tools">
+              <button class="tool" data-action="undo" id="undo-button"><span class="tool-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 8c-2.6 0-5 1-6.9 2.6L2 7v9h9l-3.6-3.6A8 8 0 0 1 20.1 16l2.4-.8A10.5 10.5 0 0 0 12.5 8z"/></svg>
+              </span>Rückgängig</button>
+              <button class="tool" data-action="erase"><span class="tool-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 3H7c-.7 0-1.2.3-1.6.9L0 12l5.4 8.1c.4.5.9.9 1.6.9h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-3 12.6L17.6 17 14 13.4 10.4 17 9 15.6l3.6-3.6L9 8.4 10.4 7 14 10.6 17.6 7 19 8.4 15.4 12z"/></svg>
+              </span>Löschen</button>
+              <button class="tool" data-action="toggle-notes" id="notes-button"><span class="tool-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.2V21h3.8L17.8 9.9l-3.7-3.7zM20.7 7a1 1 0 0 0 0-1.4l-2.3-2.3a1 1 0 0 0-1.4 0l-1.8 1.8 3.7 3.7z"/></svg>
+              </span><span id="notes-label">Notizen: aus</span></button>
+              <button class="tool" data-action="hint" id="hint-button"><span class="tool-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21c0 .5.4 1 1 1h4c.6 0 1-.5 1-1v-1H9zm3-19a7 7 0 0 0-4 12.7V17c0 .5.4 1 1 1h6c.6 0 1-.5 1-1v-2.3A7 7 0 0 0 12 2z"/></svg>
+              </span>Tipp</button>
+            </div>
+            <div class="numpad" id="numpad"></div>
+          </div>
+          <div id="solved" class="card solved" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Statistik -->
+    <section id="stats" class="screen" hidden>
+      <div class="topbar">
+        <button class="icon-button" data-action="show-home" aria-label="Zurück" title="Zurück">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/></svg>
+        </button>
+        <h2>Statistik</h2>
+      </div>
+      <div id="stats-content"></div>
+    </section>
+
+    <!-- Einstellungen -->
+    <section id="settings" class="screen" hidden>
+      <div class="topbar">
+        <button class="icon-button" data-action="show-home" aria-label="Zurück" title="Zurück">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/></svg>
+        </button>
+        <h2>Einstellungen</h2>
+      </div>
+      <div id="settings-content"></div>
+    </section>
+  </main>
+
+  <dialog id="code-dialog">
+    <form method="dialog" id="code-form">
+      <h3>Rätsel-Code eingeben</h3>
+      <p>Mit demselben Code bekommt jeder dasselbe Rätsel – auch in der Android-App. Zum Beispiel M-123456.</p>
+      <label>Code <input id="code-input" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+      <p id="code-error" class="error-text" hidden>Ungültiger Code – Buchstabe L, M, S oder E und bis zu 6 Ziffern.</p>
+      <div class="dialog-buttons">
+        <button type="button" class="text-button" data-action="close-code">Abbrechen</button>
+        <button type="submit" class="filled-button">Starten</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="confirm-dialog">
+    <form method="dialog">
+      <h3>Laufendes Spiel verwerfen?</h3>
+      <p>Das angefangene Rätsel geht verloren, wenn du ein neues startest.</p>
+      <div class="dialog-buttons">
+        <button type="button" class="text-button" data-action="cancel-start">Abbrechen</button>
+        <button type="button" class="filled-button" data-action="confirm-start">Neues Spiel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

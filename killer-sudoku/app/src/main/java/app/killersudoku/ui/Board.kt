@@ -1,11 +1,16 @@
 package app.killersudoku.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -14,6 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
@@ -22,15 +29,47 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import app.killersudoku.game.CageColors
 import app.killersudoku.game.GameState
 import app.killersudoku.game.Grid
+import kotlin.math.PI
+import kotlin.math.sin
 
-/** Das Spielfeld: Käfige, Ziffern, Notizen und Markierungen. Antippen wählt ein Feld aus. */
+/** Felder, die ein Tipp hervorhebt: das Zielfeld und die Felder der Begründung. */
+class BoardHighlight(val target: Int, val focus: Set<Int>)
+
+/**
+ * Das Spielfeld: Käfige, Ziffern, Notizen und Markierungen. Antippen wählt ein Feld aus.
+ * @param coloredCages Käfige farbig statt gestrichelt darstellen.
+ * @param flash lässt Felder kurz aufleuchten (z. B. fertige Zeile).
+ */
 @Composable
-fun Board(game: GameState, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun Board(
+    game: GameState,
+    selected: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    coloredCages: Boolean = false,
+    highlight: BoardHighlight? = null,
+    flash: Flash? = null,
+) {
     val scheme = MaterialTheme.colorScheme
     val textMeasurer = rememberTextMeasurer(cacheSize = 64)
     val currentOnSelect by rememberUpdatedState(onSelect)
+    val dark = scheme.surface.luminance() < 0.5f
+    val cageColors = remember(game.puzzle, coloredCages, dark) {
+        if (!coloredCages) null else {
+            val palette = if (dark) DARK_CAGE_COLORS else LIGHT_CAGE_COLORS
+            CageColors.assign(game.puzzle).map { palette[it] }
+        }
+    }
+    val flashProgress = remember { Animatable(1f) }
+    LaunchedEffect(flash?.id) {
+        if (flash != null) {
+            flashProgress.snapTo(0f)
+            flashProgress.animateTo(1f, tween(durationMillis = 900, easing = LinearEasing))
+        }
+    }
     Canvas(
         modifier.pointerInput(Unit) {
             detectTapGestures { offset ->
@@ -41,25 +80,45 @@ fun Board(game: GameState, selected: Int, onSelect: (Int) -> Unit, modifier: Mod
             }
         },
     ) {
-        drawBoard(game, selected, scheme, textMeasurer)
+        drawBoard(game, selected, scheme, textMeasurer, cageColors, highlight)
+        if (flash != null && flashProgress.value < 1f) drawFlash(flash, flashProgress.value, scheme.primary)
+        if (highlight != null && highlight.target >= 0) {
+            val cs = size.width / 9f
+            val stroke = 3.dp.toPx()
+            drawRect(
+                scheme.tertiary,
+                topLeft = cellOrigin(highlight.target, cs) + Offset(stroke / 2, stroke / 2),
+                size = Size(cs - stroke, cs - stroke),
+                style = Stroke(stroke),
+            )
+        }
     }
 }
 
-private fun DrawScope.drawBoard(game: GameState, selected: Int, scheme: ColorScheme, textMeasurer: TextMeasurer) {
+private fun DrawScope.drawBoard(
+    game: GameState,
+    selected: Int,
+    scheme: ColorScheme,
+    textMeasurer: TextMeasurer,
+    cageColors: List<Color>?,
+    highlight: BoardHighlight?,
+) {
     val puzzle = game.puzzle
     val cs = size.width / 9f
     val selectedDigit = if (selected >= 0) game.values[selected] else 0
 
-    // Hintergründe: Auswahl, falsche Eingaben, gleiche Ziffer, gleiche Zeile/Spalte/Block.
+    // Hintergründe: Auswahl, Fehler, Tipp, gleiche Ziffer, gleiche Zeile/Spalte/Block.
     val background = Array(81) { cell ->
+        val base = cageColors?.get(puzzle.cageOf[cell]) ?: scheme.surface
         val tint = when {
             cell == selected -> scheme.primary.copy(alpha = 0.35f)
-            game.isWrong(cell) -> scheme.error.copy(alpha = 0.2f)
+            game.isError(cell) -> scheme.error.copy(alpha = 0.25f)
+            highlight != null && cell in highlight.focus -> scheme.tertiary.copy(alpha = 0.22f)
             selectedDigit != 0 && game.values[cell] == selectedDigit -> scheme.primary.copy(alpha = 0.22f)
             selected >= 0 && isPeer(cell, selected) -> scheme.primary.copy(alpha = 0.08f)
             else -> Color.Transparent
         }
-        tint.compositeOver(scheme.surface)
+        tint.compositeOver(base)
     }
     for (cell in 0 until 81) {
         drawRect(background[cell], topLeft = cellOrigin(cell, cs), size = Size(cs, cs))
@@ -73,7 +132,7 @@ private fun DrawScope.drawBoard(game: GameState, selected: Int, scheme: ColorSch
         drawLine(scheme.outlineVariant, Offset(0f, i * cs), Offset(size.width, i * cs), thin)
     }
 
-    drawCages(game, cs, scheme.onSurfaceVariant)
+    if (cageColors == null) drawCages(game, cs, scheme.onSurfaceVariant)
 
     // Käfigsummen oben links im Käfig, mit Hintergrund, damit die gestrichelte Linie unterbrochen wird.
     val inset = cs * CAGE_INSET
@@ -109,7 +168,7 @@ private fun DrawScope.drawBoard(game: GameState, selected: Int, scheme: ColorSch
         if (value != 0) {
             val (layout, color) = when {
                 game.isGiven(cell) -> givenDigits[value - 1] to scheme.onSurface
-                game.isWrong(cell) -> userDigits[value - 1] to scheme.error
+                game.isError(cell) -> userDigits[value - 1] to scheme.error
                 else -> userDigits[value - 1] to scheme.primary
             }
             drawText(layout, color = color, topLeft = origin + centered(layout, Offset(cs / 2, cs / 2)))
@@ -185,7 +244,26 @@ private fun DrawScope.drawCages(game: GameState, cs: Float, color: Color) {
     }
 }
 
+/** Welle über die Felder: jedes Feld leuchtet kurz auf, in der Reihenfolge von [Flash.cells]. */
+private fun DrawScope.drawFlash(flash: Flash, progress: Float, color: Color) {
+    val cs = size.width / 9f
+    val spread = 0.6f
+    val n = flash.cells.size
+    flash.cells.forEachIndexed { i, cell ->
+        val t = ((progress - spread * i / n) / (1 - spread)).coerceIn(0f, 1f)
+        val alpha = sin(PI * t).toFloat() * 0.45f
+        if (alpha > 0.01f) drawRect(color.copy(alpha = alpha), topLeft = cellOrigin(cell, cs), size = Size(cs, cs))
+    }
+}
+
 private const val CAGE_INSET = 0.09f
+
+private val LIGHT_CAGE_COLORS = List(CageColors.COUNT) {
+    Color(longArrayOf(0xFFFFE3C2, 0xFFD3EDD0, 0xFFD2E4FA, 0xFFF8D5E4, 0xFFF6EDB5, 0xFFE2D9F3)[it])
+}
+private val DARK_CAGE_COLORS = List(CageColors.COUNT) {
+    Color(longArrayOf(0xFF4A3923, 0xFF2B4430, 0xFF263B54, 0xFF4B2C3B, 0xFF45421F, 0xFF372F4D)[it])
+}
 
 private fun cellOrigin(cell: Int, cs: Float) = Offset(Grid.col(cell) * cs, Grid.row(cell) * cs)
 

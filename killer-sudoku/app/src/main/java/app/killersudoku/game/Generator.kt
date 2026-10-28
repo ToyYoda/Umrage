@@ -5,8 +5,37 @@ import kotlin.random.Random
 /** Erzeugt Killer-Sudokus mit eindeutiger Lösung. */
 object Generator {
     private const val REPAIR_STEPS = 60
+    private const val RATING_ATTEMPTS = 40
 
+    /** Erzeugt das Rätsel zu einem Code-Seed – gleicher Seed, gleiches Rätsel. */
+    fun generate(difficulty: Difficulty, seed: Int): Puzzle {
+        val puzzle = generate(difficulty, Random(seed.toLong()))
+        return Puzzle(puzzle.difficulty, puzzle.solution, puzzle.cages, puzzle.givens, PuzzleCode.format(difficulty, seed))
+    }
+
+    /** Erzeugt Rätsel, bis eines die gewünschte Bewertung hat (sonst das nächstbeste). */
     fun generate(difficulty: Difficulty, random: Random = Random.Default): Puzzle {
+        var best: Puzzle? = null
+        var bestDistance = Int.MAX_VALUE
+        repeat(RATING_ATTEMPTS) {
+            val puzzle = generateUnique(difficulty, random)
+            val rating = LogicSolver.rate(puzzle, maxLevel = difficulty.rating.last)
+            val distance = when {
+                rating in difficulty.rating -> return puzzle
+                rating == LogicSolver.UNSOLVABLE -> 100
+                rating < difficulty.rating.first -> difficulty.rating.first - rating
+                else -> rating - difficulty.rating.last
+            }
+            if (distance < bestDistance) {
+                best = puzzle
+                bestDistance = distance
+            }
+        }
+        return best!!
+    }
+
+    /** Ein Rätsel mit eindeutiger Lösung und dem Käfigprofil des Schwierigkeitsgrads, ohne Bewertung. */
+    fun generateUnique(difficulty: Difficulty, random: Random): Puzzle {
         while (true) {
             val solution = randomSolvedGrid(random)
             val givens = IntArray(81)
