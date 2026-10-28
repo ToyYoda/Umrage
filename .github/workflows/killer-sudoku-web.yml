@@ -1,0 +1,54 @@
+name: Killer Sudoku (Web)
+
+on:
+  push:
+    paths:
+      - "killer-sudoku-web/**"
+      - ".github/workflows/killer-sudoku-web.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: killer-sudoku-web-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: killer-sudoku-web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Tests (inkl. Vergleich mit der Android-App)
+        run: npm test
+
+  # Veröffentlicht die Web-Version auf GitHub Pages (nur main).
+  # Einmalig nötig: Repository → Settings → Pages → Source „GitHub Actions“.
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: killer-sudoku-web
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

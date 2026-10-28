@@ -18,7 +18,8 @@ Berechtigungen.
   mehr passt, ist durchgestrichen.
 - **Tägliches Rätsel:** jeden Tag ein festes Rätsel (unter der Woche leichter, am Wochenende schwerer), mit Serie.
 - **Rätsel-Codes:** Jedes Rätsel hat einen Code wie `M-123456`. Über „Teilen“ verschickst du ihn, über
-  „Rätsel-Code eingeben“ bekommt jemand anderes genau dasselbe Rätsel – ganz ohne Server.
+  „Rätsel-Code eingeben“ bekommt jemand anderes genau dasselbe Rätsel – ganz ohne Server, auch in der
+  [Web-Version](../killer-sudoku-web).
 - **Statistik:** je Schwierigkeitsgrad gespielt/gelöst, Bestzeit, Durchschnitt, Serien ohne Fehler und ein Verlauf
   der letzten Lösezeiten.
 - **Touch-Bedienung und Notizen:** Feld antippen, Ziffer antippen. Notizen über den Notizmodus oder per langem Druck;
@@ -61,5 +62,6 @@ Voraussetzung: JDK 17 und Android SDK (z. B. über Android Studio).
   - `GameViewModel`: Zustand, Rückgängig, Speichern, Rätsel vorab im Hintergrund erzeugen
 
 Ein Code erzeugt nur mit derselben Generator-Version dasselbe Rätsel. Ändert sich der Generator, ergeben alte
-Codes andere Rätsel.
+Codes andere Rätsel. `CompatibilityTest` prüft die App gegen dieselben Referenzrätsel wie die Web-Version
+(`killer-sudoku-web/test/fixtures.tsv`).
 - `tools/smoke-test.sh` – Rauchtest, den die CI im Android-Emulator ausführt (mit Screenshots als Artefakt).

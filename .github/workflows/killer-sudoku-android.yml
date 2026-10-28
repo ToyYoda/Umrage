@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "killer-sudoku/**"
+      - "killer-sudoku-web/test/fixtures.tsv"
       - ".github/workflows/killer-sudoku-android.yml"
   workflow_dispatch:
 
